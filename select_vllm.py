@@ -66,7 +66,26 @@ def select_model():
         print("\n취소되었습니다.")
         sys.exit(0)
 
-def update_env(model):
+def select_thinking_mode():
+    print(f"\n{CYAN}========== Thinking 모드 설정 =========={NC}")
+    print("1. 활성화 (Thinking Mode ON)")
+    print("2. 비활성화 (Thinking Mode OFF)")
+    print(f"{CYAN}======================================={NC}")
+    
+    try:
+        choice = input(f"\n선택하세요 (1: ON, 2: OFF, 기본값: 1): ").strip()
+        if not choice or choice == "1":
+            return "true"
+        elif choice == "2":
+            return "false"
+        else:
+            print("잘못된 선택입니다. 기본값(ON)으로 설정합니다.")
+            return "true"
+    except KeyboardInterrupt:
+        print("\n취소되었습니다.")
+        sys.exit(0)
+
+def update_env(model, thinking_mode):
     if not ENV_PATH.exists():
         print(f"오류: .env 파일을 찾을 수 없습니다 ({ENV_PATH})")
         return False
@@ -76,6 +95,7 @@ def update_env(model):
     
     new_lines = []
     has_moe = False
+    has_thinking = False
     for line in lines:
         if line.startswith("VLLM_MODEL_NAME="):
             new_lines.append(f"VLLM_MODEL_NAME={model['id']}\n")
@@ -85,11 +105,17 @@ def update_env(model):
             new_lines.append(f"VLLM_GPU_UTIL={model['gpu_util']}\n")
         elif line.startswith("VLLM_CONTEXT_LENGTH="):
             new_lines.append(f"VLLM_CONTEXT_LENGTH={model['ctx']}\n")
+        elif line.startswith("VLLM_ENABLE_THINKING="):
+            new_lines.append(f"VLLM_ENABLE_THINKING={thinking_mode}\n")
+            has_thinking = True
         elif line.startswith("VLLM_MOE_BACKEND="):
             new_lines.append(f"VLLM_MOE_BACKEND={model.get('moe_backend', '')}\n")
             has_moe = True
         else:
             new_lines.append(line)
+            
+    if not has_thinking:
+        new_lines.append(f"VLLM_ENABLE_THINKING={thinking_mode}\n")
             
     if not has_moe and model.get('moe_backend'):
         new_lines.append(f"VLLM_MOE_BACKEND={model['moe_backend']}\n")
@@ -106,6 +132,8 @@ def main():
     selected = select_model()
     if not selected:
         return
+    
+    thinking_mode = select_thinking_mode()
 
     # 기존 컨테이너 종료는 run_vllm_bg.py에서도 수행하지만, 
     # 여기서 한 번 더 명시적으로 처리 (사용자 경험 피드백용)
@@ -113,7 +141,7 @@ def main():
     print(f"\n{YELLOW}기존 vLLM 세션({container_name}) 정리 중...{NC}")
     subprocess.run(["docker", "rm", "-f", container_name], capture_output=True)
     
-    if update_env(selected):
+    if update_env(selected, thinking_mode):
         # run_vllm_bg.py 실행
         os.execv(sys.executable, [sys.executable, str(RUN_SCRIPT)])
 

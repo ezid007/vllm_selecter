@@ -30,7 +30,8 @@
 
 ## Phase 3: 시스템 안정화 및 고도화 (In Progress)
 
-1. **모델 벤치마크 수행**:
+- [x] 인터랙티브 Thinking 모드 선택 기능 구현 (`select_vllm.py`)
+- [ ] 모델 벤치마크 수행:
    - MMLU-Pro 등 실제 성능 테스트를 위한 harness 구축.
 2. **vLLM 서빙 최적화**:
    - Grace Blackwell 환경에서 최적화된 설정값(Context Window, Chunk Size, MTP 등) 미세 조정.
