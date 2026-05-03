@@ -27,7 +27,7 @@ RED = "\033[0;31m"
 YELLOW = "\033[1;33m"
 NC = "\033[0m"
 
-CONTAINER_NAME = "qwen-vllm"
+
 
 
 def load_env(env_path: Path) -> dict[str, str]:
@@ -65,13 +65,18 @@ def start_vllm_bg(env_vars: dict[str, str]):
     docker_image = get_env(env_vars, "VLLM_DOCKER_IMAGE")
     api_key = get_env(env_vars, "OPENAI_API_KEY")
     enable_thinking = get_env(env_vars, "VLLM_ENABLE_THINKING").lower() == "true"
+    moe_backend = env_vars.get("VLLM_MOE_BACKEND", "")
+    
+    container_name = get_env(env_vars, "VLLM_CONTAINER_NAME")
+    shm_size = get_env(env_vars, "VLLM_SHM_SIZE")
+    docker_network = get_env(env_vars, "VLLM_DOCKER_NETWORK")
 
     hf_cache = Path.home() / ".cache" / "huggingface"
     hf_token_file = hf_cache / "token"
     hf_token = hf_token_file.read_text().strip() if hf_token_file.exists() else ""
 
-    print(f"{YELLOW}기존 vLLM 컨테이너 정리 중...{NC}")
-    subprocess.run(["docker", "rm", "-f", CONTAINER_NAME], capture_output=True)
+    print(f"{YELLOW}기존 vLLM 컨테이너({container_name}) 정리 중...{NC}")
+    subprocess.run(["docker", "rm", "-f", container_name], capture_output=True)
 
     # ─── vLLM serve 인자 조립 ────────────────────────────────
     vllm_args = [
@@ -83,21 +88,23 @@ def start_vllm_bg(env_vars: dict[str, str]):
         "--enable-auto-tool-choice",
         "--tool-call-parser", "qwen3_coder",
         "--max-model-len", str(max_model_len),
-        "--moe_backend", "flashinfer_cutlass",
         "--max-num-batched-tokens", "8192",
         "--default-chat-template-kwargs", json.dumps({"enable_thinking": enable_thinking}),
         "--trust-remote-code",
         "--gpu-memory-utilization", gpu_util,
     ]
 
+    if moe_backend:
+        vllm_args.extend(["--moe_backend", moe_backend])
+
     # ─── Docker 명령어 조립 ──────────────────────────────────
     docker_cmd = [
         "docker", "run", "-d",
-        "--name", CONTAINER_NAME,
+        "--name", container_name,
         "--runtime=nvidia",
         "--gpus", "all",
-        "--shm-size=16g",
-        "--network=host",
+        "--shm-size", shm_size,
+        "--network", docker_network,
         "-v", f"{hf_cache}:/root/.cache/huggingface",
         "-e", "HF_HOME=/root/.cache/huggingface",
     ]
@@ -112,7 +119,7 @@ def start_vllm_bg(env_vars: dict[str, str]):
     try:
         subprocess.run(docker_cmd, check=True)
         print(f"\n{GREEN}✓ vLLM 데몬 실행 완료!{NC}")
-        print(f"로그 확인: {YELLOW}docker logs -f {CONTAINER_NAME}{NC}")
+        print(f"로그 확인: {YELLOW}docker logs -f {container_name}{NC}")
     except subprocess.CalledProcessError:
         print(f"\n{RED}✗ vLLM 데몬 실행에 실패했습니다.{NC}")
 

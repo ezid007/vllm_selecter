@@ -24,10 +24,11 @@
 - [x] `--language-model-only` 옵션 적용 (텍스트 전용 모델 메모리 최적화)
 - [x] 문서 업데이트 (README, CHANGELOG, plan.md)
 - [x] Docker 이미지 빌드: `build-and-copy.sh --vllm-ref v0.20.0 --tf5 --rebuild-vllm`
-- [ ] 빌드 완료 후 2번 모델 정상 실행 테스트
-- [ ] 1번 모델(122B) 호환성 테스트
+- [x] 빌드 완료 후 2번 모델 정상 실행 테스트
+- [x] 1번 모델(122B) 호환성 테스트 완료 (OOM 및 MoE 백엔드 충돌 문제 해결)
+- [x] 보안 및 유연성 강화: 하드코딩된 Docker 설정값(컨테이너 명, SHM, 네트워크) .env 이전 완료
 
-## Phase 3: 향후 계획 (Planned)
+## Phase 3: 시스템 안정화 및 고도화 (In Progress)
 
 1. **모델 벤치마크 수행**:
    - MMLU-Pro 등 실제 성능 테스트를 위한 harness 구축.

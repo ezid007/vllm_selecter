@@ -41,7 +41,8 @@ vllm
 
 ```
 vllm_selecter/
-├── .env                    # 모델 설정 (모델 ID, 포트, GPU 사용률 등)
+vllm_selecter/
+├── .env                    # 모델 및 Docker 실행 설정 (컨테이너 명, 포트, GPU, SHM 등)
 ├── .gitignore              # Git 제외 설정
 ├── select_vllm.py          # 모델 선택 인터페이스 (alias: vllm)
 ├── run_vllm_bg.py          # Docker vLLM 백그라운드 실행 엔진
@@ -61,16 +62,14 @@ vllm_selecter/
 vllm              # 인터랙티브 모델 선택
 ```
 
-### 로그 확인
+### 컨테이너 관리
 
 ```bash
-docker logs -f qwen-vllm
-```
+# 로그 확인
+docker logs -f $(grep VLLM_CONTAINER_NAME .env | cut -d'=' -f2)
 
-### 컨테이너 중지
-
-```bash
-docker rm -f qwen-vllm
+# 컨테이너 중지 및 삭제
+docker rm -f $(grep VLLM_CONTAINER_NAME .env | cut -d'=' -f2)
 ```
 
 ## Hardware Optimization (Grace Blackwell)

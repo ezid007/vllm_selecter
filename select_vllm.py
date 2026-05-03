@@ -14,20 +14,32 @@ MODELS = [
     {
         "name": "Qwen 3.5 122B (FP4)",
         "id": "RedHatAI/Qwen3.5-122B-A10B-NVFP4",
-        "gpu_util": "0.87",
-        "ctx": "256k"
+        "gpu_util": "0.90",
+        "ctx": "256k",
+        "moe_backend": ""
     },
     {
         "name": "Qwen 3.6 35B (MoE / Claude-Distilled)",
         "id": "hesamation/Qwen3.6-35B-A3B-Claude-4.6-Opus-Reasoning-Distilled",
         "gpu_util": "0.80",
-        "ctx": "64k"
+        "ctx": "64k",
+        "moe_backend": "flashinfer_cutlass"
     }
 ]
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 ENV_PATH = SCRIPT_DIR / ".env"
 RUN_SCRIPT = SCRIPT_DIR / "run_vllm_bg.py"
+
+def load_container_name():
+    """ .env에서 VLLM_CONTAINER_NAME을 가져옵니다. """
+    if not ENV_PATH.exists():
+        return "qwen-vllm" # 기본값
+    with open(ENV_PATH, "r") as f:
+        for line in f:
+            if line.startswith("VLLM_CONTAINER_NAME="):
+                return line.split("=")[1].strip()
+    return "qwen-vllm"
 
 def select_model():
     print(f"\n{CYAN}========== vLLM 모델 선택 (Selecter) =========={NC}")
@@ -63,6 +75,7 @@ def update_env(model):
         lines = f.readlines()
     
     new_lines = []
+    has_moe = False
     for line in lines:
         if line.startswith("VLLM_MODEL_NAME="):
             new_lines.append(f"VLLM_MODEL_NAME={model['id']}\n")
@@ -72,8 +85,16 @@ def update_env(model):
             new_lines.append(f"VLLM_GPU_UTIL={model['gpu_util']}\n")
         elif line.startswith("VLLM_CONTEXT_LENGTH="):
             new_lines.append(f"VLLM_CONTEXT_LENGTH={model['ctx']}\n")
+        elif line.startswith("VLLM_MOE_BACKEND="):
+            new_lines.append(f"VLLM_MOE_BACKEND={model.get('moe_backend', '')}\n")
+            has_moe = True
         else:
             new_lines.append(line)
+            
+    if not has_moe and model.get('moe_backend'):
+        new_lines.append(f"VLLM_MOE_BACKEND={model['moe_backend']}\n")
+    elif not has_moe and not model.get('moe_backend'):
+        new_lines.append(f"VLLM_MOE_BACKEND=\n")
             
     with open(ENV_PATH, "w") as f:
         f.writelines(new_lines)
@@ -88,8 +109,9 @@ def main():
 
     # 기존 컨테이너 종료는 run_vllm_bg.py에서도 수행하지만, 
     # 여기서 한 번 더 명시적으로 처리 (사용자 경험 피드백용)
-    print(f"\n{YELLOW}기존 vLLM 세션 정리 중...{NC}")
-    subprocess.run(["docker", "rm", "-f", "qwen-vllm"], capture_output=True)
+    container_name = load_container_name()
+    print(f"\n{YELLOW}기존 vLLM 세션({container_name}) 정리 중...{NC}")
+    subprocess.run(["docker", "rm", "-f", container_name], capture_output=True)
     
     if update_env(selected):
         # run_vllm_bg.py 실행

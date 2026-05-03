@@ -2,6 +2,21 @@
 
 이 프로젝트의 모든 중요한 변경 사항은 이 파일에 기록됩니다.
 
+## [0.3.2] - 2026-05-04
+
+### Refactored
+- 보안 및 유연성 강화를 위해 하드코딩된 Docker 설정값을 `.env`로 이전:
+  - `VLLM_CONTAINER_NAME`, `VLLM_SHM_SIZE`, `VLLM_DOCKER_NETWORK` 환경 변수 도입.
+  - `select_vllm.py` 및 `run_vllm_bg.py`에서 위 환경 변수를 사용하도록 리팩토링.
+- `readme.md` 및 `plans/plan.md`를 최신 시스템 구조에 맞게 업데이트.
+
+## [0.3.1] - 2026-05-04
+
+### Fixed
+- 1번 모델 (Qwen 3.5 122B) 실행 실패 문제 해결:
+  - GPU 메모리 할당 초과(OOM) 오류를 방지하기 위해 `gpu_util`을 0.87에서 0.80으로 하향 조정.
+  - `--moe_backend flashinfer_cutlass` 옵션이 Non-MoE 모델에 하드코딩되어 있던 문제를 수정하여 `.env` (`VLLM_MOE_BACKEND`)를 통해 동적으로 주입되도록 리팩토링.
+
 ## [0.3.0] - 2026-05-03
 
 ### Added
